@@ -2,11 +2,20 @@ import pandas as pd
 import datetime as dt 
 import numpy as np
 
+######File Handling#############
+try:
+    file=open("C:/Users/Parimal/Desktop/Project/AutomateLog/Logs.txt","r")
+    ###loading file into csv format##
+    df = pd.read_csv(file, sep=' at ', header=None, engine='python',index_col=False)
+    df = df.rename(columns={0:'context', 1:'date'})    
+    ####File Resource Closing######
+    file.close()
+except IOError:
+    print('file not found....!')
 
-###loading file into csv format
-df = pd.read_csv("/Users/Shachi/Documents/sampleLog", sep=' at ', header=None, engine='python', 
-                 index_col=False)
-df = df.rename(columns={0:'context', 1:'date'})
+
+
+
 
 ###Defining columns
 df[['day','datetime']] = df.date.str.split(" ", 1, expand=True)
