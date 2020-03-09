@@ -1,10 +1,10 @@
 import pandas as pd
-import datetime as dt 
+#import datetime as dt 
 import numpy as np
 
 
 ###loading file into csv format
-df = pd.read_csv("/Users/Shachi/Documents/sampleLog", sep=' at ', header=None, engine='python', 
+df = pd.read_csv("/Users/Dattarya/Desktop/Logs.txt", sep=' at ', header=None, engine='python', 
                  index_col=False)
 df = df.rename(columns={0:'context', 1:'date'})
 
@@ -114,6 +114,7 @@ final_df = final_df[[ 'Pipeline', 'JobName','JobFileName','Day','Date','start_da
 
 
 ###Calculating aggregated values for runtime
+
 maxi=final_df.groupby( 'JobName').max()['runtime']
 mini=final_df.groupby( 'JobName').min()['runtime']
 average=final_df.groupby('JobName').mean()['runtime']
