@@ -28,24 +28,21 @@ failed_jobs = df[(df['job_name']=='failed')]
 
 ###Claening and matching jobnames by replacing ans swaping values
 df=df.replace(to_replace='5amflashsalesExec', value='5amflashsales')
-df.loc[df['job_name'] == '5amflashsales', 'job_file_name'] = 'nan'
 df.loc[df['job_file_name'] == 'daily files', 'job_name'] = 'daily files'
 df.loc[df['job_file_name'] == 'put daily files', 'job_name'] = 'daily files'
 df.loc[df['job_file_name'] == 'historical files', 'job_name'] = 'historical files'
 df.loc[df['job_file_name'] == 'put historical files', 'job_name'] = 'historical files'
 
-idx = (df['job_name'] == 'ending')
-df.loc[idx,['job_name','status']] = df.loc[idx,['status','job_name']].values
-
-idx = (df['job_name'] == 'completed')
-df.loc[idx,['job_name','status']] = df.loc[idx,['status','job_name']].values
+#idx = (df['job_name'] == 'ending')
+df.loc[(df['job_name'] == 'ending'),['job_name','status']] = df.loc[(df['job_name'] == 'ending'),['status','job_name']].values
+#idx = (df['job_name'] == 'completed')
+df.loc[(df['job_name'] == 'completed'),['job_name','status']] = df.loc[(df['job_name'] == 'completed'),['status','job_name']].values
 
 df=df.replace(to_replace='completed', value='ending')
 df=df.replace(to_replace='successful', value='ending')
 
 ###To obtain starting and ending jobs
 df  = df[(df['status']=='starting') | (df['status']=='ending')]
-
 
 ###Conterving daye to string to filter 
 df["Date"] = df["date"].map(lambda ts: ts.strftime("%Y-%m-%d"))
@@ -57,16 +54,16 @@ sample_strt_df=df[(df['status']=='starting')]
 sample_end_df=df[(df['status']=='ending')]
 
 ###finding unique start and end time foe each day
-df2=sample_strt_df.groupby(['job_name', 'Date']).min()
-df3=sample_end_df.groupby(['job_name', 'Date']).min()
+mstrt_df=sample_strt_df.groupby(['job_name', 'Date']).min()
+m_end_df=sample_end_df.groupby(['job_name', 'Date']).min()
 
 ###Final start time data
-final_strt=pd.merge(df2, sample_strt_df, on=(['job_name','datetime']), how='inner', indicator=False)
+final_strt=pd.merge(mstrt_df, sample_strt_df, on=(['job_name','datetime']), how='inner', indicator=False)
 final_strt.rename(columns = { 'status_x':'status','job_file_name_x':'job_file_name', 'date_x':'date','day_x':'day', 'time_x':'time'}, inplace = True) 
 final_strt = final_strt[[ 'status','job_name','job_file_name','day','Date','time','datetime']]
 
 ###final end time data
-final_end=pd.merge(df3, sample_end_df, on=(['job_name','datetime']), how='inner', indicator=False)
+final_end=pd.merge(m_end_df, sample_end_df, on=(['job_name','datetime']), how='inner', indicator=False)
 final_end.rename(columns = { 'status_x':'status', 'date_x':'date','day_x':'day', 'time_x':'time'}, inplace = True) 
 final_end = final_end[[ 'status','job_name','day','Date','time','datetime']]
 
@@ -84,17 +81,15 @@ final_df.loc[final_df['JobName'] == 'middaysales', 'Internal_SLA'] = '15:45:00'
 
 final_df['Internal_SLA']=pd.to_datetime(final_df['Date'] + ' ' + final_df['Internal_SLA'], dayfirst=True) 
 final_df['Deviation']= final_df['end_datetime'] - final_df['Internal_SLA']
-final_df['Deviation']=final_df['Deviation']/np.timedelta64(1,'m') 
-
+final_df['Deviation']=round(final_df['Deviation']/np.timedelta64(1,'m'), 4)
 final_df['Internal_SLA'] = final_df['Internal_SLA'].dt.time
 #
 #final_df['Internal_SLA']=pd.to_datetime(final_df['Internal_SLA'], format='%H:%M:%S')
 #final_df['Internal_SLA'] = final_df['Internal_SLA'].dt.time
 
-
 final_df['SLA'] = '06:00:00'
-final_df.loc[final_df['JobName'] == '5amflashsales', 'sla'] = '05:00:00'
-final_df.loc[final_df['JobName'] == 'middaysales', 'sla'] = '16:00:00'
+final_df.loc[final_df['JobName'] == '5amflashsales', 'SLA'] = '05:00:00'
+final_df.loc[final_df['JobName'] == 'middaysales', 'SLA'] = '16:00:00'
 
 final_df['Pipeline'] = 'Sales'
 final_df.loc[final_df['JobName'] == '5amflashsales', 'Pipeline'] = 'Flashsales'
@@ -104,19 +99,17 @@ final_df.sort_values(["Date","JobName"], axis = 0, ascending = True, inplace = T
 
 
 ###Calculating runtime 
-
 final_df['runtime']= final_df['end_datetime'] - final_df['start_datetime']
-#min_time=final_df['runtime'].dt.total_seconds()/60
-final_df['runtime']=final_df['runtime']/np.timedelta64(1,'m')
+final_df['runtime']=round((final_df['runtime']/np.timedelta64(1,'m')), 4)
 
 
 final_df = final_df[[ 'Pipeline', 'JobName','JobFileName','Day','Date','start_datetime', 'end_datetime','runtime','Internal_SLA', 'SLA','Deviation']]
 
 
 ###Calculating aggregated values for runtime
-maxi=final_df.groupby( 'JobName').max()['runtime']
-mini=final_df.groupby( 'JobName').min()['runtime']
-average=final_df.groupby('JobName').mean()['runtime']
+maxi=round(final_df.groupby( 'JobName').max()['runtime'],4)
+mini=round(final_df.groupby( 'JobName').min()['runtime'],4)
+average=round(final_df.groupby('JobName').mean()['runtime'],4)
 
 ###combing all aggregate values 
 aggregate=pd.concat([maxi, mini, average], axis=1)
@@ -128,14 +121,8 @@ agg_merge.sort_values(["Date","JobName"], axis = 0, ascending = True, inplace = 
  
 
 ####Converting and exporting file into csv
-#final_df.to_csv(r'/Users/Shachi/Documents/LogFiles.csv', index=False)
+agg_merge.to_csv(r'/Users/Shachi/Documents/LogFiles.csv', index=False)
 #aggregate.to_csv(r'/Users/Shachi/Documents/AggregateFiles.csv')
-#failed_jobs.to_csv(r'/Users/Shachi/Documents/Failed_jobFiles.csv', index=False)
-
-
-
-
-
-
+failed_jobs.to_csv(r'/Users/Shachi/Documents/Failed_jobFiles.csv', index=False)
 
 
